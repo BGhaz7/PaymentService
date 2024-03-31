@@ -6,8 +6,8 @@ namespace PaymentService.Models
     {
         [Key]
         public int id { get; set; }
-        public int Balance { get; set; }
-        public int topUp { get; set; }
+        public decimal Balance { get; set; }
+        public decimal topUp { get; set; }
     }
 }
 

@@ -10,7 +10,7 @@ namespace PaymentService.Data
         public paymentContext(DbContextOptions<paymentContext> options) : base(options)
         {
         }
-        
+        public DbSet<transaction> Transactions { get; set; }
         public DbSet<PaymentWallet> PaymentWallets { get; set; }
 
         

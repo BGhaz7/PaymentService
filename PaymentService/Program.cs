@@ -15,6 +15,7 @@
     using PaymentService.Data;
     using PaymentService.Models;
     using Npgsql.EntityFrameworkCore.PostgreSQL;
+    using System.ComponentModel.DataAnnotations;
 
     internal class Program
     {
@@ -116,10 +117,77 @@
             });
             
             
-            app.MapPost("v1/ApplePayTopUp", async (int amount) =>
+            app.MapPost("v1/ApplePayTopUp", async (topUpDto topUp, paymentContext db) =>
             {
-                //TODO: Later
+                var record = await db.PaymentWallets.FindAsync(topUp.user_id);
+                if (record != null)
+                {
+                    record.Balance += topUp.amount;
+                    record.topUp = topUp.amount;
+                }
+                else
+                {
+                    Results.BadRequest("No record found!");
+                }
+                var transaction = new transaction
+                {
+                    userid = topUp.user_id,
+                    amount = topUp.amount,
+                    date = DateTime.UtcNow,
+                };
+                db.Transactions.Add(transaction);
+                await db.SaveChangesAsync();
+                return Results.Ok();
             });
+            
+            app.MapGet("/v1/transactions", async (HttpContext httpContext, paymentContext db, int pageNumber = 1, int pageSize = 10) =>
+            {
+                var authorizationHeader = httpContext.Request.Headers["Authorization"].ToString();
+
+                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                {
+                    return Results.BadRequest("Missing or invalid Authorization header.");
+                }
+
+                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+                var userId = int.Parse(extractIdFromJWT(token));
+                Console.Write(userId);
+                
+                var transactions = await db.Transactions
+                    .Where(t => t.userid == userId)
+                    .OrderByDescending(t => t.date)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var totalTransactions = await db.Transactions.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalTransactions / (double)pageSize);
+
+                return Results.Ok(new { Transactions = transactions, TotalPages = totalPages });
+            });
+
+            app.MapGet("/v1/balance", async (HttpContext httpContext, paymentContext db) =>
+                {
+                    var authorizationHeader = httpContext.Request.Headers["Authorization"].ToString();
+
+                    if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                    {
+                        return Results.BadRequest("Missing or invalid Authorization header.");
+                    }
+
+                    var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+                    var userId = int.Parse(extractIdFromJWT(token));
+                    Console.Write(userId);
+
+                    var record = await db.PaymentWallets.FindAsync(userId);
+                    if (record == null)
+                    {
+                        return Results.BadRequest("Invalid Username or Password");
+                    }
+
+                    return Results.Ok(record.Balance);
+                });
+            
             app.Run();
         }
     }
