@@ -117,9 +117,10 @@
             });
             
             
-            app.MapPost("v1/ApplePayTopUp", async (topUpDto topUp, paymentContext db) =>
+            app.MapPost("v1/ApplePayTopUp", async (paymentContext db, topUpDto topUp) =>
             {
-                var record = await db.PaymentWallets.FindAsync(topUp.user_id);
+                var userId = int.Parse(extractIdFromJWT(topUp.jwtToken));
+                var record = await db.PaymentWallets.FindAsync(userId);
                 if (record != null)
                 {
                     record.Balance += topUp.amount;
@@ -131,7 +132,7 @@
                 }
                 var transaction = new transaction
                 {
-                    userid = topUp.user_id,
+                    userid = userId,
                     amount = topUp.amount,
                     date = DateTime.UtcNow,
                 };
@@ -180,14 +181,8 @@
                     Console.Write(userId);
 
                     var record = await db.PaymentWallets.FindAsync(userId);
-                    if (record == null)
-                    {
-                        return Results.BadRequest("Invalid Username or Password");
-                    }
-
-                    return Results.Ok(record.Balance);
+                    return record == null ? Results.BadRequest("Invalid Username or Password") : Results.Ok(record.Balance);
                 });
-            
             app.Run();
         }
     }
