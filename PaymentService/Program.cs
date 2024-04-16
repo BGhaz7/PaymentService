@@ -35,29 +35,26 @@
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public static string extractIdFromJWT(string token)
+        private static string extractToken(HttpContext context)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            try
+            var authorizationHeader = context.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                var jwtToken = tokenHandler.ReadJwtToken(token);
-        
-                // Assuming the user ID is stored in a claim with type 'nameidentifier' or a custom type.
-                // Adjust the claim type according to how the user ID is stored in your tokens.s
-                var idClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.NameId);
-
-                if (idClaim == null)
-                {
-                    return "Id does not exist";
-                }
-
-                var id = idClaim.Value;
-                return id;
+                throw new InvalidOperationException("Missing or invalid Authorization header.");
             }
-            catch (Exception ex)
+            return authorizationHeader["Bearer ".Length..].Trim();
+        }
+
+        private static int extractIdFromJWT(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.NameId);
+            if (userIdClaim == null)
             {
-                return "invalid token";
+                throw new InvalidOperationException("Token does not contain a user ID.");
             }
+            return int.Parse(userIdClaim.Value);
         }
 
         public static void Main(string[] args)
@@ -77,12 +74,53 @@
                         ValidateIssuer = false,
                         ValidateAudience = false
                     };
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                            {
+                                context.Response.Headers.Append("Token-Expired", "true");
+                            }
+
+                            if (context.Exception.GetType() == typeof(SecurityTokenInvalidSignatureException))
+                            {
+                                context.Response.Headers.Append("Token-Invalid", "true");
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
+                    
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnChallenge = context =>
+                        {
+                            context.HandleResponse();
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            context.Response.ContentType = "application/json";
+                            return context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "You are not authorized or your token has expired." }));
+                        }
+                    };
                 });
+            
 
             builder.Services.AddControllers();
             var app = builder.Build();
             app.UseAuthentication();
             app.UseAuthorization(); //This also applies to minimal apis
+            app.Use(async (context, next) =>
+            {
+                await next();
+
+                if (context.Response is { StatusCode: 401, HasStarted: false })
+                {
+                    // Handle the case where the token is invalid or expired
+                    // Modify the response if needed
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "Invalid or expired token provided." }));
+                }
+            });
+
 
             app.MapPost("v1/createRecord", async (HttpContext httpContext, paymentContext db) =>
             {
@@ -93,8 +131,8 @@
                     return Results.BadRequest("Missing or invalid Authorization header.");
                 }
 
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
-                var userId = int.Parse(extractIdFromJWT(token));
+                var token = extractToken(httpContext);
+                var userId = extractIdFromJWT(token);
 
                 var paymentWallet = new PaymentWallet
                 {
@@ -117,9 +155,10 @@
             });
             
             
-            app.MapPost("v1/ApplePayTopUp", async (paymentContext db, topUpDto topUp) =>
+            app.MapPost("v1/ApplePayTopUp", async (HttpContext httpContext,paymentContext db, topUpDto topUp) =>
             {
-                var userId = int.Parse(extractIdFromJWT(topUp.jwtToken));
+                var token = extractToken(httpContext);
+                var userId = extractIdFromJWT(token);
                 var record = await db.PaymentWallets.FindAsync(userId);
                 if (record != null)
                 {
@@ -150,8 +189,8 @@
                     return Results.BadRequest("Missing or invalid Authorization header.");
                 }
 
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
-                var userId = int.Parse(extractIdFromJWT(token));
+                var token = extractToken(httpContext);
+                var userId = extractIdFromJWT(token);
                 Console.Write(userId);
                 
                 var transactions = await db.Transactions
@@ -176,8 +215,8 @@
                         return Results.BadRequest("Missing or invalid Authorization header.");
                     }
 
-                    var token = authorizationHeader.Substring("Bearer ".Length).Trim();
-                    var userId = int.Parse(extractIdFromJWT(token));
+                    var token = extractToken(httpContext);
+                    var userId = extractIdFromJWT(token);
                     Console.Write(userId);
 
                     var record = await db.PaymentWallets.FindAsync(userId);

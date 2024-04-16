@@ -3711,24 +3711,26 @@
     ]
   },
   "packageFolders": {
-    "/Users/badr/.nuget/packages/": {}
+    "C:\\Users\\ASUS\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/badr/RiderProjects/PaymentService/PaymentService/PaymentService.csproj",
+      "projectUniqueName": "C:\\Users\\ASUS\\RiderProjects\\PaymentService\\PaymentService\\PaymentService.csproj",
       "projectName": "PaymentService",
-      "projectPath": "/Users/badr/RiderProjects/PaymentService/PaymentService/PaymentService.csproj",
-      "packagesPath": "/Users/badr/.nuget/packages/",
-      "outputPath": "/Users/badr/RiderProjects/PaymentService/PaymentService/obj/",
+      "projectPath": "C:\\Users\\ASUS\\RiderProjects\\PaymentService\\PaymentService\\PaymentService.csproj",
+      "packagesPath": "C:\\Users\\ASUS\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\ASUS\\RiderProjects\\PaymentService\\PaymentService\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/badr/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\ASUS\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -3805,8 +3807,20 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.202/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.200/PortableRuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'Azure.Identity' 1.10.4 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wvxc-855f-jvrv",
+      "libraryId": "Azure.Identity",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
 }
