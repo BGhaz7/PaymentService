@@ -16,6 +16,7 @@
     using PaymentService.Models;
     using Npgsql.EntityFrameworkCore.PostgreSQL;
     using System.ComponentModel.DataAnnotations;
+    using RabbitMQ.Client;
 
     internal class Program
     {
@@ -59,6 +60,9 @@
 
         public static void Main(string[] args)
         {
+            var accountSender = new ConnectionFactory { HostName = "localhost", Port = 5157};
+            using var connection = accountSender.CreateConnection();
+            using var channel = connection.CreateModel();
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<paymentContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("PostGresConnectionString")));
@@ -124,6 +128,11 @@
 
             app.MapPost("v1/createRecord", async (HttpContext httpContext, paymentContext db) =>
             {
+                channel.QueueDeclare(queue: "recordCreate",
+                    durable: false,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
                 var authorizationHeader = httpContext.Request.Headers["Authorization"].ToString();
 
                 if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
@@ -133,6 +142,7 @@
 
                 var token = extractToken(httpContext);
                 var userId = extractIdFromJWT(token);
+                
 
                 var paymentWallet = new PaymentWallet
                 {

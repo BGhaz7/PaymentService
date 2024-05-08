@@ -240,3 +240,4 @@ C:\Users\ASUS\RiderProjects\PaymentService\PaymentService\obj\Debug\net8.0\refin
 C:\Users\ASUS\RiderProjects\PaymentService\PaymentService\obj\Debug\net8.0\PaymentService.pdb
 C:\Users\ASUS\RiderProjects\PaymentService\PaymentService\obj\Debug\net8.0\PaymentService.genruntimeconfig.cache
 C:\Users\ASUS\RiderProjects\PaymentService\PaymentService\obj\Debug\net8.0\ref\PaymentService.dll
+C:\Users\ASUS\RiderProjects\PaymentService\PaymentService\bin\Debug\net8.0\RabbitMQ.Client.dll
